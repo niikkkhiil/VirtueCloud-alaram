@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Alarm Manager Serverless Application
+
+Parameters:
+  MonitoredFunctions:
+    Type: CommaDelimitedList
+    Description: Comma-separated list of Lambda function names to monitor
+
+Resources:
+  AlarmManagerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: AlarmManagerFunction
+      Handler: lambda_handler.lambda_handler
+      Runtime: python3.11
+      Timeout: 30
+      Environment:
+        Variables:
+          MONITORED_FUNCTIONS: !Join [',', !Ref MonitoredFunctions]
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - lambda:GetFunctionConfiguration
+                - lambda:UpdateFunctionConfiguration
+              Resource: '*'
+      Events:
+        HealthCheck:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: get
+            RestApiId: !Ref AlarmApi
+        GetAlarms:
+          Type: Api
+          Properties:
+            Path: /alarms
+            Method: get
+            RestApiId: !Ref AlarmApi
+        ToggleAlarm:
+          Type: Api
+          Properties:
+            Path: /alarms/toggle
+            Method: post
+            RestApiId: !Ref AlarmApi
+
+  AlarmApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type'"
+        AllowOrigin: "'*'"
+
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${WebsiteBucket.Arn}/*'
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${AlarmApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  WebsiteUrl:
+    Description: S3 Website URL
+    Value: !GetAtt WebsiteBucket.WebsiteURL
