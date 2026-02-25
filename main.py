@@ -4,8 +4,11 @@ from fastapi.staticfiles import StaticFiles
 from typing import Union
 from pydantic import BaseModel
 import os
+import boto3
+from botocore.exceptions import ClientError
 
 app = FastAPI()
+lambda_client = boto3.client('lambda')
 
 class Item(BaseModel):
     name: str
@@ -17,11 +20,11 @@ class AlarmToggle(BaseModel):
     function_name: str
     enabled: bool
 
-alarms_state = {
-    "Raju": True,
-    "Shyam": False,
-    "Baburao": True
-}
+MONITORED_FUNCTIONS = [
+    "Raju",
+    "Shyam",
+    "Baburao"
+]
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -46,12 +49,28 @@ async def update_item(item_id: int, item: Item):
 
 @app.get("/alarms")
 async def get_alarms():
-    alarms = [{"name": name, "enabled": enabled} for name, enabled in alarms_state.items()]
+    alarms = []
+    for func_name in MONITORED_FUNCTIONS:
+        try:
+            response = lambda_client.get_function_configuration(FunctionName=func_name)
+            env_vars = response.get('Environment', {}).get('Variables', {})
+            enabled = env_vars.get('ALARMS_ENABLED', 'true') == 'true'
+            alarms.append({"name": func_name, "enabled": enabled})
+        except ClientError:
+            alarms.append({"name": func_name, "enabled": False})
     return {"alarms": alarms}
 
 @app.post("/alarms/toggle")
 async def toggle_alarm(data: AlarmToggle):
-    if data.function_name in alarms_state:
-        alarms_state[data.function_name] = data.enabled
+    try:
+        response = lambda_client.get_function_configuration(FunctionName=data.function_name)
+        env_vars = response.get('Environment', {}).get('Variables', {})
+        env_vars['ALARMS_ENABLED'] = 'true' if data.enabled else 'false'
+        
+        lambda_client.update_function_configuration(
+            FunctionName=data.function_name,
+            Environment={'Variables': env_vars}
+        )
         return {"success": True, "enabled": data.enabled}
-    return {"success": False, "error": "Function not found"}
+    except ClientError as e:
+        return {"success": False, "error": str(e)}

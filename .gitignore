@@ -1,0 +1,9 @@
+fast/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+.DS_Store
+packaged.yaml
+index_updated.html

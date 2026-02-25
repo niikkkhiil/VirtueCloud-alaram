@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# Configuration
 STACK_NAME="alarm-manager-stack"
 S3_BUCKET="alarm-manager-deployment-$(date +%s)"
-MONITORED_FUNCTIONS="my-lambda-1,my-lambda-2,my-lambda-3"
+MONITORED_FUNCTIONS="Raju,Shyam,Baburao"
 
 echo "Creating S3 bucket for deployment..."
 aws s3 mb s3://$S3_BUCKET

@@ -6,8 +6,48 @@ Parameters:
   MonitoredFunctions:
     Type: CommaDelimitedList
     Description: Comma-separated list of Lambda function names to monitor
+    Default: "Raju,Shyam,Baburao"
 
 Resources:
+  RajuFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Raju
+      Handler: index.lambda_handler
+      Runtime: python3.11
+      InlineCode: |
+        def lambda_handler(event, context):
+            return {'statusCode': 200, 'body': 'Raju function'}
+      Environment:
+        Variables:
+          ALARMS_ENABLED: 'true'
+
+  ShyamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Shyam
+      Handler: index.lambda_handler
+      Runtime: python3.11
+      InlineCode: |
+        def lambda_handler(event, context):
+            return {'statusCode': 200, 'body': 'Shyam function'}
+      Environment:
+        Variables:
+          ALARMS_ENABLED: 'true'
+
+  BaburaoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Baburao
+      Handler: index.lambda_handler
+      Runtime: python3.11
+      InlineCode: |
+        def lambda_handler(event, context):
+            return {'statusCode': 200, 'body': 'Baburao function'}
+      Environment:
+        Variables:
+          ALARMS_ENABLED: 'true'
+
   AlarmManagerFunction:
     Type: AWS::Serverless::Function
     Properties:
